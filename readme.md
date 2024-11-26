@@ -7,6 +7,9 @@ RealTimeEdify is a real-time collaborative document editing web application buil
 ![image](https://github.com/user-attachments/assets/808859f8-d3a0-40af-80aa-dff6e978a5c1)
 ![image](https://github.com/user-attachments/assets/1a759dce-e026-4a16-8f93-13bce44c99e8)
 
+##TEAM members
+Shahjahan Pasha (1602-21-733-023)
+Shyma Khade (1602-21-733-049)
 
 ## Features
 
