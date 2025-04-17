@@ -7,34 +7,38 @@ const Card = ({ cardData, deleteEvent }) => {
     const navigate = useNavigate();
     const { setCurrentDoc, darkMode } = useSupplier();
 
-    // Conditional styles based on darkMode
     const cardBgClass = darkMode ? 'bg-dark text-light' : 'bg-light text-dark';
     const cardTitleClass = darkMode ? 'text-info' : 'text-primary';
     const textMutedClass = darkMode ? 'text-secondary' : 'text-muted';
 
+    // Safe preview extraction
+    const previewText = (() => {
+        const firstOp = cardData?.content?.ops?.[0];
+        if (firstOp && typeof firstOp.insert === 'string') {
+            return firstOp.insert.length > 50
+                ? firstOp.insert.slice(0, 50) + '...'
+                : firstOp.insert;
+        }
+        return '';
+    })();
+
     return (
         <>
             {cardData?.title && (
-                <div className={`col-12`}>
-                    <div className={`card ${cardBgClass} shadow-sm  h-100`}>
+                <div className="col-12">
+                    <div className={`card ${cardBgClass} shadow-sm h-100`}>
                         <div className="card-body d-flex flex-column">
-                            {/* Card Title and Metadata */}
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h5 className={`card-title ${cardTitleClass} mb-0`}>{cardData?.title}</h5>
+                                <h5 className={`card-title ${cardTitleClass} mb-0`}>{cardData.title}</h5>
                                 <small className={textMutedClass}>
                                     {new Date(cardData?.createdAt).toLocaleDateString()}
                                 </small>
                             </div>
                             <p className={`${textMutedClass} mb-2`}>Owner: {cardData?.owner?.username}</p>
-                            {/* Preview Text */}
-                            <p className="card-text mb-4">
-                                {cardData?.content?.ops[0]?.insert?.slice(0, 50) || ''}
-                                {cardData?.content?.ops[0]?.insert?.length > 50 ? '...' : ''}
-                            </p>
-                            {/* Action Buttons */}
+                            <p className="card-text mb-4">{previewText}</p>
                             <div className="d-flex justify-content-between mt-auto">
                                 <button
-                                    className={`btn btn-outline-danger`}
+                                    className="btn btn-outline-danger"
                                     data-bs-toggle="modal"
                                     data-bs-target={`#deleteDoc${cardData?._id}`}
                                 >
@@ -45,7 +49,7 @@ const Card = ({ cardData, deleteEvent }) => {
                                         navigate(`/edit/${cardData._id}`);
                                         setCurrentDoc(cardData);
                                     }}
-                                    className={`btn btn-outline-success`}
+                                    className="btn btn-outline-success"
                                 >
                                     <i className="bi bi-pencil-square me-2"></i>Edit
                                 </button>
