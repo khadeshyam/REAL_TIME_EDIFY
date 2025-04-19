@@ -85,10 +85,15 @@ const Login = () => {
         </form>
         <hr className={`my-4 ${darkMode ? 'border-light' : 'border-dark'}`} />
         <p className={`text-center mb-0 ${darkMode ? 'text-light' : 'text-dark'}`}>
+        <div>
           Don't have an account?{' '}
           <Link to="/register" className={darkMode ? 'text-light' : 'text-primary'}>
             Register here
           </Link>
+          </div>
+          <div>
+          <Link to="/forgot-password">Forgot Password?</Link>
+          </div>
         </p>
       </div>
     </div>

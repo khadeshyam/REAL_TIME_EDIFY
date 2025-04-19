@@ -1,5 +1,3 @@
-
-
 export const gmailContent = (verificationToken, username) => {
     return `
     <!DOCTYPE html>
@@ -141,5 +139,83 @@ export const successFullVerification = (username) => {
     
     `;
   }
+  
+export const passwordResetContent = (resetLink, username, expirationText) => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; }
+            .header { color: #2c3e50; text-align: center; }
+            .content { margin: 20px 0; line-height: 1.6; }
+            .button {
+                display: inline-block;
+                padding: 12px 24px;
+                background-color: #3498db;
+                color: white !important;
+                text-decoration: none;
+                border-radius: 5px;
+                margin: 20px 0;
+            }
+            .footer { text-align: center; color: #7f8c8d; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1 class="header">Password Reset Request</h1>
+            <div class="content">
+                <p>Hello ${username},</p>
+                <p>We received a request to reset your password. Click the button below to reset it:</p>
+                <center>
+                    <a href="${resetLink}" class="button">Reset Password</a>
+                </center>
+                <p>This link expires in ${expirationText}.</p>
+                <p>If you didn't request this, please ignore this email or contact support.</p>
+            </div>
+            <div class="footer">
+                <p>© ${new Date().getFullYear()} RealTimeEdify. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+};
+
+// Add password change confirmation template
+export const passwordChangeConfirmation = (username) => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            /* Reuse same styles */
+            .success-badge { 
+                background: #2ecc71;
+                color: white;
+                padding: 8px 15px;
+                border-radius: 20px;
+                display: inline-block;
+                margin-bottom: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-badge">Password Updated</div>
+            <h1 class="header">Security Update Confirmation</h1>
+            <div class="content">
+                <p>Hello ${username},</p>
+                <p>Your password was successfully changed on ${new Date().toLocaleString()}.</p>
+                <p>If you didn't make this change, please contact our support team immediately.</p>
+            </div>
+            <div class="footer">
+                <p>Stay secure,<br>The RealTimeEdify Team</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+};
   
   

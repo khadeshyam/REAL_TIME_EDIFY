@@ -1,3 +1,20 @@
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: import.meta.env.VITE_APP_BACKEND_URL || '/api/v1',
+});
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth') 
+    ? JSON.parse(localStorage.getItem('auth')).token 
+    : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
 export const setLocalStorageWithExpiry = (key, data, expirationMinutes) => {
     const now = new Date();
     const item = {
@@ -73,3 +90,71 @@ export const register = async (user) => {
         return { status: 500, message: error.message };
     }
 }
+
+export const forgotPassword = async (email) => {
+    try {
+        const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL || '/api/v1'}/users/forgot-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+        
+        const data = await res.json();
+        return {
+            status: res.status,
+            message: data.message
+        };
+        
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        return { 
+            status: 500, 
+            message: 'Failed to send reset instructions' 
+        };
+    }
+};
+
+export const resetPassword = async (token, password) => {
+    try {
+        const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL || '/api/v1'}/users/reset-password/${token}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password })
+        });
+
+        const data = await res.json();
+        return {
+            status: res.status,
+            message: data.message
+        };
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        return { 
+            status: 500, 
+            message: 'Password reset failed' 
+        };
+    }
+};
+
+export const exportDocument = async (documentId, format, content) => {
+  try {
+    const response = await API.post(`/documents/${documentId}/export/${format}`, 
+      { content },
+      {
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || 'Export failed';
+  }
+};
+

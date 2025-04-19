@@ -1,5 +1,8 @@
 import DocumentModel from "../models/documents.model.js";
 import User from "../models/user.model.js";
+import PDFDocument from 'pdfkit';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import sanitizeHtml from 'sanitize-html';
 
 export const createDocument = async (req, res) => {
 
@@ -153,3 +156,51 @@ export const getAllCollaborators = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 }
+
+export const exportDocument = async (req, res) => {
+    try {
+        const { documentId, format } = req.params;
+        const document = await DocumentModel.findById(documentId);
+        
+        if (!document) return res.status(404).json({ message: 'Document not found' });
+        console.log(req.user)
+        if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' }); // Add user check
+
+        
+        if (document.owner.toString() !== req.user.id.toString() && 
+            !document.collaborators.includes(req.user.id)) {
+            return res.status(403).json({ message: 'Unauthorized for export' });
+        }
+
+        const cleanContent = sanitizeHtml(document.content, {
+            allowedTags: format === 'pdf' ? ['h1', 'h2', 'p', 'strong', 'em'] : [],
+            allowedAttributes: {}
+        });
+
+        if (format === 'pdf') {
+            const pdfDoc = new PDFDocument();
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=${document.title}.pdf`);
+            pdfDoc.pipe(res);
+            pdfDoc.fontSize(12).text(cleanContent);
+            pdfDoc.end();
+        } 
+        else if (format === 'docx') {
+            const docx = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({
+                            children: [new TextRun(cleanContent)]
+                        })
+                    ]
+                }]
+            });
+            const buffer = await Packer.toBuffer(docx);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            res.setHeader('Content-Disposition', `attachment; filename=${document.title}.docx`);
+            res.send(buffer);
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

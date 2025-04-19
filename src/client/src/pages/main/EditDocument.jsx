@@ -7,6 +7,7 @@ import { addCollaboratorToDoc, getAllCollaborators } from '../../helpers/docs/do
 import { useAuth } from '../../context/authContext';
 import { API } from '../../helpers/config';
 import Editor from './Editor.jsx';
+import ExportButton from '../../components/ExportButton.jsx';
 
 const EditDocument = () => {
     const [currentUsers, setCurrentUsers] = useState([]);
@@ -30,6 +31,53 @@ const EditDocument = () => {
             return;
         }
         toast.error(res?.data?.message);
+    };
+
+    const saveDocumentImmediately = () => {
+        if (isModified) {
+            socket.emit("save-doc", { docId: currentDoc?._id, data: quill?.getContents() }, (error) => {
+                if (error) {
+                    console.error(error);
+                } else {
+                    toast.success('Document saved successfully');
+                    setIsModified(false);
+                }
+            });
+        }
+    };
+
+    const handlePrint = () => {
+        if (!quill) {
+            toast.error('Editor not ready for printing');
+            return;
+        }
+        
+        const printContent = quill.root.innerHTML;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${currentDoc?.title || 'Document'} - Print</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .ql-editor { width: 100%; margin: 0 auto; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${currentDoc?.title || 'Document'}</h1>
+                    <div class="ql-editor">${printContent}</div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() {
+                                window.close();
+                            };
+                        }
+                    <\/script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     useEffect(() => {
@@ -82,20 +130,6 @@ const EditDocument = () => {
             clearInterval(interval);
         };
     }, [quill, isModified, currentDoc]);
-
-    // Function to save immediately when necessary (can be called when leaving the page, for example)
-    const saveDocumentImmediately = () => {
-        if (isModified) {
-            socket.emit("save-doc", { docId: currentDoc?._id, data: quill?.getContents() }, (error) => {
-                if (error) {
-                    console.error(error);
-                } else {
-                    toast.success('Document saved successfully');
-                    setIsModified(false);  // After saving, mark as not modified
-                }
-            });
-        }
-    };
 
     // Other collaborator and room functionalities
     useEffect(() => {
@@ -258,15 +292,21 @@ const EditDocument = () => {
                             Document Title: <u>{currentDoc?.title}</u>
                         </h1>
 
-                        {/* View Collaborators Button */}
-                        <button
-                            type="button"
-                            className="btn btn-secondary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#collaborators"
-                        >
-                            <i className="bi bi-eye-fill"></i> View Collaborators
-                        </button>
+                        <div className="d-flex gap-2">
+                           <ExportButton
+                            documentId={currentDoc?._id}
+                            title={currentDoc?.title}
+                            quillContent={quill?.root?.innerHTML || ''}
+                            />
+                            <button
+                                type="button"
+                                className={`btn btn-secondary ${darkMode ? 'text-light' : ''}`}
+                                data-bs-toggle="modal"
+                                data-bs-target="#collaborators"
+                            >
+                                <i className="bi bi-eye-fill"></i> View
+                            </button>
+                        </div>
                     </div>
 
                     {/* Quill Editor */}
