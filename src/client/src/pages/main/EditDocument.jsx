@@ -7,13 +7,13 @@ import { addCollaboratorToDoc, getAllCollaborators } from '../../helpers/docs/do
 import { useAuth } from '../../context/authContext';
 import { API } from '../../helpers/config';
 import Editor from './Editor.jsx';
-import ExportButton from '../../components/ExportButton.jsx';
 
 const EditDocument = () => {
     const [currentUsers, setCurrentUsers] = useState([]);
     const [collaboratorEmail, setCollaboratorEmail] = useState('');
     const [collaborators, setCollaborators] = useState([]);
     const [isModified, setIsModified] = useState(false);
+    const [exportLoading, setExportLoading] = useState(false);
 
     const navigate = useNavigate();
     const { auth } = useAuth();
@@ -43,6 +43,156 @@ const EditDocument = () => {
                     setIsModified(false);
                 }
             });
+        }
+    };
+
+    // Export as PDF using browser's print-to-PDF functionality
+    const exportToPDF = () => {
+        if (!quill) {
+            toast.error('Editor not ready for export');
+            return;
+        }
+        
+        setExportLoading(true);
+        try {
+            const content = quill.root.innerHTML;
+            const title = currentDoc?.title || 'Document';
+            
+            // Create a new window with styled content
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>${title}</title>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                line-height: 1.6;
+                                margin: 40px;
+                                color: #333;
+                            }
+                            h1 {
+                                text-align: center;
+                                margin-bottom: 30px;
+                                color: #2c3e50;
+                            }
+                            .content {
+                                margin: 0 auto;
+                            }
+                            @media print {
+                                body {
+                                    margin: 20mm;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${title}</h1>
+                        <div class="content">${content}</div>
+                        <script>
+                            // Automatically open print dialog when content loads
+                            window.onload = function() {
+                                document.title = "${title}.pdf";
+                                setTimeout(function() {
+                                    window.print();
+                                    window.onfocus = function() {
+                                        setTimeout(function() {
+                                            window.close();
+                                        }, 500);
+                                    };
+                                }, 1000);
+                            };
+                        </script>
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            setExportLoading(false);
+            toast.success('PDF export initiated');
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export as PDF');
+            setExportLoading(false);
+        }
+    };
+
+    // Export as text/plain document
+    const exportToDocx = () => {
+        if (!quill) {
+            toast.error('Editor not ready for export');
+            return;
+        }
+        
+        setExportLoading(true);
+        try {
+            // Create a temporary element to get plain text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = quill.root.innerHTML;
+            
+            // Get HTML content
+            const htmlContent = quill.root.innerHTML;
+            const title = currentDoc?.title || 'Document';
+            
+            // Create a complete HTML document with styles
+            const fullHtml = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                      xmlns:w="urn:schemas-microsoft-com:office:word" 
+                      xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="utf-8">
+                    <title>${title}</title>
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <w:WordDocument>
+                            <w:View>Print</w:View>
+                            <w:Zoom>100</w:Zoom>
+                            <w:DoNotOptimizeForBrowser/>
+                        </w:WordDocument>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        /* Add Word document styling */
+                        body {
+                            font-family: 'Calibri', sans-serif;
+                            font-size: 12pt;
+                            line-height: 1.5;
+                        }
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Calibri', sans-serif;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    ${htmlContent}
+                </body>
+                </html>
+            `;
+            
+            // Create blob and download
+            const blob = new Blob([fullHtml], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link and click it
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${title}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Clean up
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            setExportLoading(false);
+            toast.success('Document exported successfully');
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export document');
+            setExportLoading(false);
         }
     };
 
@@ -293,11 +443,62 @@ const EditDocument = () => {
                         </h1>
 
                         <div className="d-flex gap-2">
-                           <ExportButton
-                            documentId={currentDoc?._id}
-                            title={currentDoc?.title}
-                            quillContent={quill?.root?.innerHTML || ''}
-                            />
+                            {/* Export Dropdown */}
+                            <div className="dropdown">
+                                <button
+                                    className={`btn btn-primary dropdown-toggle ${exportLoading ? 'disabled' : ''}`}
+                                    type="button"
+                                    id="exportDropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    disabled={exportLoading}
+                                >
+                                    {exportLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Exporting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-file-earmark-arrow-down me-1"></i>
+                                            Export
+                                        </>
+                                    )}
+                                </button>
+                                <ul className="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={exportToPDF}
+                                            disabled={exportLoading}
+                                        >
+                                            <i className="bi bi-file-earmark-pdf me-2"></i>
+                                            Export as PDF
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={exportToDocx}
+                                            disabled={exportLoading}
+                                        >
+                                            <i className="bi bi-file-earmark-word me-2"></i>
+                                            Export as DOC
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={handlePrint}
+                                            disabled={exportLoading}
+                                        >
+                                            <i className="bi bi-printer me-2"></i>
+                                            Print
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            
                             <button
                                 type="button"
                                 className={`btn btn-secondary ${darkMode ? 'text-light' : ''}`}
@@ -333,7 +534,7 @@ const EditDocument = () => {
                                 className={`form-control ${darkMode ? 'bg-dark text-light' : 'bg-light text-dark'}`}
                                 placeholder="Email"
                             />
-                            <button className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button className="btn btn-secondary" data-bs-dismiss="modal" id="closeTheModal">Close</button>
                             <button className="btn btn-primary" onClick={handleAddCollaborator}>Add</button>
                         </div>
                     </>
